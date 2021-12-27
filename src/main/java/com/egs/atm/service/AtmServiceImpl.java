@@ -1,5 +1,6 @@
 package com.egs.atm.service;
 
+import com.egs.atm.model.dto.CheckCardDto;
 import com.egs.atm.model.request.FingerprintRequest;
 import com.egs.atm.model.response.EGSResponse;
 import com.netflix.hystrix.contrib.javanica.annotation.HystrixCommand;
@@ -33,16 +34,16 @@ public class AtmServiceImpl implements AuthService, CardService, OperationServic
             @HystrixProperty(name = "circuitBreaker.errorThresholdPercentage", value = "50")
     })
     @Override
-    public EGSResponse checkCard(String cardNo, String cvv, String expDate) {
+    public CheckCardDto checkCard(String cardNo, String cvv, String expDate) {
         String url = String.format("%s/api/auth/card?card_no=%s&cvv=%s&exp_date=%s",
                 bankServiceHostUrl, cardNo, cvv, expDate);
 
-        ResponseEntity response = restTemplate.exchange(url,
+        EGSResponse response = restTemplate.exchange(url,
                 HttpMethod.GET,
                 null,
-                EGSResponse.class);
+                EGSResponse.class).getBody();
 
-        return (EGSResponse) response.getBody();
+        return (CheckCardDto) response.getBody();
 
     }
 
@@ -71,7 +72,7 @@ public class AtmServiceImpl implements AuthService, CardService, OperationServic
 
     }
 
-    private EGSResponse getFailurePageForCheckCard(String cardNo, String cvv, String expDate) {
-        return new EGSResponse("Internal Server Error!", HttpStatus.INTERNAL_SERVER_ERROR);
+    private CheckCardDto getFailurePageForCheckCard(String cardNo, String cvv, String expDate) {
+        return new CheckCardDto(true,Long.valueOf(1));
     }
 }

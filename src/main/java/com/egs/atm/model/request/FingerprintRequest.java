@@ -12,9 +12,5 @@ import javax.validation.constraints.Size;
 @NoArgsConstructor
 public class FingerprintRequest {
 
-    @NotBlank
-    @Size(min = 4, max = 4)
-    String pin;
-
     String fingerprint;
 }
