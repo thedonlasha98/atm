@@ -1,10 +1,11 @@
 package com.egs.atm.service;
 
+import com.egs.atm.exception.EGSException;
+import com.egs.atm.model.dto.BalanceDto;
 import com.egs.atm.model.dto.CheckCardDto;
+import com.egs.atm.model.request.CashRequest;
 import com.egs.atm.model.request.FingerprintRequest;
-import com.egs.atm.model.response.EGSResponse;
 import com.netflix.hystrix.contrib.javanica.annotation.HystrixCommand;
-import com.netflix.hystrix.contrib.javanica.annotation.HystrixProperty;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
@@ -12,6 +13,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+
+import java.util.List;
 
 @Service
 public class AtmServiceImpl implements AuthService, CardService, OperationService {
@@ -26,38 +29,32 @@ public class AtmServiceImpl implements AuthService, CardService, OperationServic
     }
 
 
-    @HystrixCommand(fallbackMethod = "getFailurePageForCheckCard",
-            commandProperties = {
-            @HystrixProperty(name = "execution.isolation.thread.timeoutInMilliseconds", value = "2000"),
-            @HystrixProperty(name = "circuitBreaker.requestVolumeThreshold", value = "5"),
-            @HystrixProperty(name = "circuitBreaker.sleepWindowInMilliseconds", value = "10000"),
-            @HystrixProperty(name = "circuitBreaker.errorThresholdPercentage", value = "50")
-    })
+    @HystrixCommand(fallbackMethod = "getFailurePageForCheckCard")
     @Override
     public CheckCardDto checkCard(String cardNo, String cvv, String expDate) {
         String url = String.format("%s/api/auth/card?card_no=%s&cvv=%s&exp_date=%s",
                 bankServiceHostUrl, cardNo, cvv, expDate);
 
-        EGSResponse response = restTemplate.exchange(url,
+        ResponseEntity response = restTemplate.exchange(url,
                 HttpMethod.GET,
                 null,
-                EGSResponse.class).getBody();
+                CheckCardDto.class);
 
         return (CheckCardDto) response.getBody();
 
     }
 
     @Override
-    public EGSResponse validateCardByPinAndFingerprint(Long id, String pin, String fingerprint) {
+    public CheckCardDto validateCardByPinAndFingerprint(Long id, String pin, String fingerprint) {
         String url = String.format("%s/api/auth/card/%s/validate-credential?pin=%s&fingerprint=%s",
                 bankServiceHostUrl, id, pin, fingerprint);
 
         ResponseEntity response = restTemplate.exchange(url,
                 HttpMethod.GET,
                 null,
-                EGSResponse.class);
+                CheckCardDto.class);
 
-        return (EGSResponse) response.getBody();
+        return (CheckCardDto) response.getBody();
     }
 
     @Override
@@ -68,11 +65,51 @@ public class AtmServiceImpl implements AuthService, CardService, OperationServic
         restTemplate.exchange(url,
                 HttpMethod.PATCH,
                 new HttpEntity(request),
-                EGSResponse.class);
+                ResponseEntity.class);
 
     }
 
-    private CheckCardDto getFailurePageForCheckCard(String cardNo, String cvv, String expDate) {
-        return new CheckCardDto(true,Long.valueOf(1));
+    @Override
+    public List<BalanceDto> getBalance(Long cardId) {
+        String url = String.format("%s/api/card/%s/balance",
+                bankServiceHostUrl, cardId);
+
+        ResponseEntity response = restTemplate.exchange(url,
+                HttpMethod.GET,
+                null,
+                List.class);
+
+        return (List<BalanceDto>) response.getBody();
+    }
+
+    @Override
+    public void cashDeposit(CashRequest cashRequest) {
+        String url = String.format("%s/api/cash/deposit",
+                bankServiceHostUrl);
+
+        restTemplate.exchange(url,
+                HttpMethod.POST,
+                new HttpEntity(cashRequest),
+                ResponseEntity.class);
+    }
+
+    @Override
+    public void cashWithdrawal(CashRequest cashRequest) {
+        String url = String.format("%s/api/cash/withdrawal",
+                bankServiceHostUrl);
+
+        restTemplate.exchange(url,
+                HttpMethod.POST,
+                new HttpEntity(cashRequest),
+                ResponseEntity.class);
+    }
+
+    private CheckCardDto getFailurePageForCheckCard(String cardNo, String cvv, String expDate, Throwable throwable) {
+        try {
+            int i = 1 / 0;
+            return null;
+        } catch (Exception ex) {
+            throw new EGSException("Hystrix Exception!", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 }

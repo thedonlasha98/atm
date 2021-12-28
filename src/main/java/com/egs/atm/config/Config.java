@@ -17,7 +17,7 @@ public class Config {
         return restTemplateBuilder
                 .setConnectTimeout(Duration.ofSeconds(1000))
                 .setReadTimeout(Duration.ofSeconds(1000))
-                //.interceptors(new BasicAuthorizationInterceptor("username", "password"))
+                .interceptors(new BasicAuthorizationInterceptor("atm", "bank1234"))
                 .build();
     }
 }

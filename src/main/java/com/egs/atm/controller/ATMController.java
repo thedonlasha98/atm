@@ -1,64 +1,56 @@
-//package com.egs.atm.controller;
-//
-//import com.egs.atm.model.EGSResponse;
-//import com.egs.atm.model.JwtResponse;
-//import com.egs.atm.model.LoginRequest;
-//import org.springframework.http.HttpEntity;
-//import org.springframework.http.HttpHeaders;
-//import org.springframework.http.HttpMethod;
-//import org.springframework.http.HttpStatus;
-//import org.springframework.web.bind.annotation.*;
-//import org.springframework.web.client.RestTemplate;
-//
-//import javax.servlet.http.HttpServletRequest;
-//
-//@RestController
-//@RequestMapping("/api/atm")
-//public class ATMController {
-//
-//    private final RestTemplate restTemplate;
-//
-//    public ATMController(RestTemplate restTemplate) {
-//        this.restTemplate = restTemplate;
-//    }
-//
-//    @PostMapping(value = "/card/identify")
-//    EGSResponse<JwtResponse> identifyCard(String cardNo, String fingerprint) {
-//
-//        Object response = restTemplate.exchange("http://localhost:8083/api/auth/signin",
-//                HttpMethod.POST,
-//                new HttpEntity(new LoginRequest(cardNo, fingerprint)),
-//                EGSResponse.class).getBody().getResult();
-//
-//        return new EGSResponse(response, HttpStatus.OK);
-//    }
-//
-//    @GetMapping(value = "/check-pin/{pin}")
-//    EGSResponse<JwtResponse> checkPinValidity(@PathVariable Long pin, HttpServletRequest request) {
-//
-//        Object response = restTemplate.exchange("http://localhost:8083/api/auth/check-pin/" + pin,
-//                HttpMethod.GET,
-//                new HttpEntity(getHeaders(request)),
-//                EGSResponse.class).getBody().getResult();
-//
-//        return new EGSResponse(response, HttpStatus.OK);
-//    }
-//
-//    @PostMapping(value = "/logout")
-//    EGSResponse<JwtResponse> identifyCard(HttpServletRequest request) {
-//
-//        Object response = restTemplate.exchange("http://localhost:8083/api/auth/logout",
-//                HttpMethod.POST,
-//                new HttpEntity(getHeaders(request)),
-//                EGSResponse.class).getBody().getResult();
-//
-//        return new EGSResponse(response, HttpStatus.OK);
-//    }
-//
-//    private HttpHeaders getHeaders(HttpServletRequest request) {
-//        HttpHeaders headers = new HttpHeaders();
-//        headers.add("Authorization", request.getHeader("Authorization"));
-//
-//        return headers;
-//    }
-//}
+package com.egs.atm.controller;
+
+
+import com.egs.atm.model.dto.BalanceDto;
+import com.egs.atm.model.dto.Card;
+import com.egs.atm.model.request.CashRequest;
+import com.egs.atm.service.CardService;
+import com.egs.atm.service.OperationService;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import javax.servlet.http.HttpSession;
+import javax.validation.Valid;
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/atm")
+public class ATMController {
+
+    private final CardService cardService;
+
+    private final OperationService operationService;
+
+    public ATMController(CardService cardService, OperationService operationService) {
+        this.cardService = cardService;
+        this.operationService = operationService;
+    }
+
+    @GetMapping("/balance")
+    ResponseEntity<List<BalanceDto>> getBalance(HttpSession session) {
+        Card card = Card.getAuthCard(session, true);
+
+        List<BalanceDto> response = cardService.getBalance(card.getCardId());
+
+        return new ResponseEntity(response, HttpStatus.OK);
+    }
+
+    @PostMapping(value = "/deposit")
+    ResponseEntity<Void> cashDeposit(@Valid @RequestBody CashRequest cashRequest, HttpSession session) {
+        Card card = Card.getAuthCard(session, true);
+        cashRequest.setCardId(card.getCardId());
+        operationService.cashDeposit(cashRequest);
+
+        return new ResponseEntity(HttpStatus.CREATED);
+    }
+
+    @PostMapping(value = "/withdrawal")
+    ResponseEntity<Void> cashWithdrawal(@Valid @RequestBody CashRequest cashRequest, HttpSession session) {
+        Card card = Card.getAuthCard(session, true);
+        cashRequest.setCardId(card.getCardId());
+        operationService.cashWithdrawal(cashRequest);
+
+        return new ResponseEntity(HttpStatus.CREATED);
+    }
+}
