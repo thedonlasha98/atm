@@ -6,16 +6,21 @@ import com.egs.atm.model.dto.CheckCardDto;
 import com.egs.atm.model.request.CashRequest;
 import com.egs.atm.model.request.FingerprintRequest;
 import com.netflix.hystrix.contrib.javanica.annotation.HystrixCommand;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 
+@Slf4j
 @Service
 public class AtmServiceImpl implements AuthService, CardService, OperationService {
 
@@ -29,21 +34,23 @@ public class AtmServiceImpl implements AuthService, CardService, OperationServic
     }
 
 
-    @HystrixCommand(fallbackMethod = "getFailurePageForCheckCard")
+    @HystrixCommand(commandKey = "bankServiceCommandKey",
+            fallbackMethod = "getFailurePageForCheckCard")
     @Override
     public CheckCardDto checkCard(String cardNo, String cvv, String expDate) {
         String url = String.format("%s/api/auth/card?card_no=%s&cvv=%s&exp_date=%s",
                 bankServiceHostUrl, cardNo, cvv, expDate);
 
         ResponseEntity response = restTemplate.exchange(url,
-                HttpMethod.GET,
-                null,
-                CheckCardDto.class);
+                    HttpMethod.GET,
+                    null,
+                    CheckCardDto.class);
 
         return (CheckCardDto) response.getBody();
 
     }
 
+    @HystrixCommand(commandKey = "bankServiceCommandKey")
     @Override
     public CheckCardDto validateCardByPinAndFingerprint(Long id, String pin, String fingerprint) {
         String url = String.format("%s/api/auth/card/%s/validate-credential?pin=%s&fingerprint=%s",
@@ -57,6 +64,7 @@ public class AtmServiceImpl implements AuthService, CardService, OperationServic
         return (CheckCardDto) response.getBody();
     }
 
+    @HystrixCommand(commandKey = "bankServiceCommandKey")
     @Override
     public void setFingerprint(Long id, FingerprintRequest request) {
         String url = String.format("%s/api/auth/card/%s/set-fingerprint",
@@ -69,6 +77,7 @@ public class AtmServiceImpl implements AuthService, CardService, OperationServic
 
     }
 
+    @HystrixCommand(commandKey = "bankServiceCommandKey")
     @Override
     public List<BalanceDto> getBalance(Long cardId) {
         String url = String.format("%s/api/card/%s/balance",
@@ -82,6 +91,7 @@ public class AtmServiceImpl implements AuthService, CardService, OperationServic
         return (List<BalanceDto>) response.getBody();
     }
 
+    @HystrixCommand(commandKey = "bankServiceCommandKey")
     @Override
     public void cashDeposit(CashRequest cashRequest) {
         String url = String.format("%s/api/cash/deposit",
@@ -93,6 +103,7 @@ public class AtmServiceImpl implements AuthService, CardService, OperationServic
                 ResponseEntity.class);
     }
 
+    @HystrixCommand(commandKey = "bankServiceCommandKey")
     @Override
     public void cashWithdrawal(CashRequest cashRequest) {
         String url = String.format("%s/api/cash/withdrawal",
@@ -104,12 +115,8 @@ public class AtmServiceImpl implements AuthService, CardService, OperationServic
                 ResponseEntity.class);
     }
 
-    private CheckCardDto getFailurePageForCheckCard(String cardNo, String cvv, String expDate, Throwable throwable) {
-        try {
-            int i = 1 / 0;
-            return null;
-        } catch (Exception ex) {
-            throw new EGSException("Hystrix Exception!", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+    public CheckCardDto getFailurePageForCheckCard(String cardNo, String cvv, String expDate, Throwable e) {
+        log.error("service has error: ", e);
+        throw new EGSException(((HttpClientErrorException) e).getMessage(), ((HttpClientErrorException) e).getStatusCode());
     }
 }

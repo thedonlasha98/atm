@@ -46,4 +46,16 @@ public class Utils {
             throw new EGSException("Incorrect length of pin parameter!", HttpStatus.BAD_REQUEST);
         }
     }
+
+    public static String maskCardNumber(String source) {
+        if (source.length() == 16) {
+            String first = source.substring(0, 6);
+            String last = source.substring(12);
+            String middle = "******";
+
+            return first + middle + last;
+        } else {
+            return source;
+        }
+    }
 }
