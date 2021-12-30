@@ -23,8 +23,8 @@ public class Config {
             RestTemplateBuilder restTemplateBuilder) {
 
         return restTemplateBuilder
-                .setConnectTimeout(Duration.ofSeconds(1000))
-                .setReadTimeout(Duration.ofSeconds(1000))
+                .setConnectTimeout(Duration.ofSeconds(5000))
+                .setReadTimeout(Duration.ofSeconds(5000))
                 .interceptors(new BasicAuthorizationInterceptor(username, password))
                 .build();
     }

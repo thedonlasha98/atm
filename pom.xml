@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>com.egs</groupId>
 	<artifactId>atm</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>1.0</version>
 	<name>atm</name>
 	<description>atm project for Spring Boot</description>
 	<properties>

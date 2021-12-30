@@ -3,6 +3,7 @@ package com.egs.atm.controller;
 import com.egs.atm.model.dto.Card;
 import com.egs.atm.model.dto.CheckCardDto;
 import com.egs.atm.model.request.FingerprintRequest;
+import com.egs.atm.model.request.InitCardRequest;
 import com.egs.atm.service.AuthService;
 import com.egs.atm.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +13,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpSession;
+import javax.validation.Valid;
 
 @Validated
 @RestController
@@ -22,13 +24,11 @@ public class AuthController {
     private AuthService authService;
 
     @PostMapping
-    ResponseEntity initCard(@RequestParam(name = "card_no") String cardNo,
-                         @RequestParam(name = "cvv") String cvv,
-                         @RequestParam(name = "exp_date") String expDate,
-                         HttpSession session) {
+    ResponseEntity initCard(@RequestBody @Valid InitCardRequest cardRequest,
+                            HttpSession session) {
         session.removeAttribute("card");
-        Utils.validateCard(cardNo, cvv, expDate);
-        CheckCardDto response = authService.checkCard(cardNo, cvv, expDate);
+        Utils.validateCard(cardRequest.getCardNo(), cardRequest.getCvv(), cardRequest.getExpDate());
+        CheckCardDto response = authService.checkCard(cardRequest.getCardNo(), cardRequest.getCvv(), cardRequest.getExpDate());
         initSessionCard(session, response.getCardId(), false);
 
         return new ResponseEntity(response, HttpStatus.OK);

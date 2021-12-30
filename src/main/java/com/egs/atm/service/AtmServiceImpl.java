@@ -1,6 +1,5 @@
 package com.egs.atm.service;
 
-import com.egs.atm.exception.EGSException;
 import com.egs.atm.model.dto.BalanceDto;
 import com.egs.atm.model.dto.CheckCardDto;
 import com.egs.atm.model.request.CashRequest;
@@ -10,12 +9,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.HttpStatusCodeException;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
@@ -34,17 +29,16 @@ public class AtmServiceImpl implements AuthService, CardService, OperationServic
     }
 
 
-    @HystrixCommand(commandKey = "bankServiceCommandKey",
-            fallbackMethod = "getFailurePageForCheckCard")
+    @HystrixCommand(commandKey = "bankServiceCommandKey")
     @Override
     public CheckCardDto checkCard(String cardNo, String cvv, String expDate) {
         String url = String.format("%s/api/auth/card?card_no=%s&cvv=%s&exp_date=%s",
                 bankServiceHostUrl, cardNo, cvv, expDate);
 
         ResponseEntity response = restTemplate.exchange(url,
-                    HttpMethod.GET,
-                    null,
-                    CheckCardDto.class);
+                HttpMethod.GET,
+                null,
+                CheckCardDto.class);
 
         return (CheckCardDto) response.getBody();
 
@@ -113,10 +107,5 @@ public class AtmServiceImpl implements AuthService, CardService, OperationServic
                 HttpMethod.POST,
                 new HttpEntity(cashRequest),
                 ResponseEntity.class);
-    }
-
-    public CheckCardDto getFailurePageForCheckCard(String cardNo, String cvv, String expDate, Throwable e) {
-        log.error("service has error: ", e);
-        throw new EGSException(((HttpClientErrorException) e).getMessage(), ((HttpClientErrorException) e).getStatusCode());
     }
 }
